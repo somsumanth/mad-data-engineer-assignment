@@ -21,7 +21,7 @@ st.caption(
 
 @st.cache_data(ttl=60)
 def load_data():
-    """Load the cleaned repository records from SQLite."""
+    """Load cleaned repository records from SQLite."""
 
     with sqlite3.connect(DB_NAME) as connection:
         return pd.read_sql_query(
@@ -85,7 +85,7 @@ try:
         hover_data=["forks", "open_issues", "owner"],
     )
 
-    st.plotly_chart(fig_stars, use_container_width=True)
+    st.plotly_chart(fig_stars, width="stretch")
 
     # Chart 2: Stars versus forks
     st.subheader("Stars vs. Forks")
@@ -103,9 +103,9 @@ try:
         },
     )
 
-    st.plotly_chart(fig_scatter, use_container_width=True)
+    st.plotly_chart(fig_scatter, width="stretch")
 
-    # Reporting-ready table
+    # Searchable repository table
     st.subheader("Repository Details")
 
     search = st.text_input("Search repository or owner")
@@ -115,21 +115,21 @@ try:
     if search:
         matches = (
             filtered_df["repo_name"].str.contains(
-                search, case=False, na=False
+                search, case=False, na=False, regex=False
             )
             | filtered_df["owner"].str.contains(
-                search, case=False, na=False
+                search, case=False, na=False, regex=False
             )
         )
         filtered_df = filtered_df[matches]
 
     st.dataframe(
         filtered_df,
-        use_container_width=True,
+        width="stretch",
         hide_index=True,
     )
 
-    # Download cleaned records
+    # Download filtered records as CSV
     csv_data = filtered_df.to_csv(index=False).encode("utf-8")
 
     st.download_button(
@@ -141,9 +141,12 @@ try:
 
     st.caption(
         "Metrics describe the repositories in the latest fetched dataset. "
-        "They are snapshots, not historical growth measurements."
+        "These are snapshots, not historical growth measurements."
     )
 
 except (sqlite3.Error, pd.errors.DatabaseError) as error:
     st.error(f"Could not read the database: {error}")
     st.info("Run pipeline.py first to create and populate the database.")
+except (OSError, ValueError) as error:
+    st.error(f"Could not load repository data: {error}")
+    st.info("Check that the database exists and run pipeline.py first.")
